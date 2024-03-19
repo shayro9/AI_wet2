@@ -8,6 +8,7 @@ import random
 INCENTIVE = 10
 BATTERY_2_CREDIT = 2
 
+
 # TODO: section a : 3
 def smart_heuristic(env: WarehouseEnv, robot_id: int):
     my_robot = env.get_robot(robot_id)
@@ -51,11 +52,11 @@ class AgentGreedyImproved(AgentGreedy):
         return smart_heuristic(env, robot_id)
 
 
-def closest_station_dist(location: tuple[int, int], stations: list[ChargeStation, ChargeStation]):
+def closest_station_dist(location: tuple[int], stations: list[ChargeStation]):
     return min(manhattan_distance(location, stations[0].position), manhattan_distance(location, stations[1].position))
 
 
-def closest_station(location: tuple[int, int], stations: list[ChargeStation, ChargeStation]):
+def closest_station(location: tuple[int, int], stations: list[ChargeStation]):
     return stations[0] if manhattan_distance(location, stations[0].position) <= manhattan_distance(location, stations[
         1].position) else stations[1]
 
@@ -69,10 +70,12 @@ def set_focus(env: WarehouseEnv, robot_id: int):
     for p in packages:
         if not p.on_board:
             continue
+
         dist_to_package = manhattan_distance(pos, p.position)
         dist_to_target = manhattan_distance(p.position, p.destination)
         if dist_to_target == 0:
             continue
+
         dist_target_station = closest_station_dist(p.destination, stations)
 
         if battery > dist_to_package + dist_to_target + dist_target_station:
@@ -107,14 +110,13 @@ def tie_break(pack1: Package, pack2: Package, stations: list[ChargeStation], pla
         dist1 += manhattan_distance(pack1.destination, s.position)
         dist2 += manhattan_distance(pack2.destination, s.position)
 
-    if dist1 == dist2:
+    if manhattan_distance(pack1.position, pack1.destination) == manhattan_distance(pack2.position, pack2.destination):
         if manhattan_distance(player_pos, pack1.position) == manhattan_distance(player_pos, pack2.position):
-            return manhattan_distance(pack1.position, pack1.destination) > manhattan_distance(pack2.position,
-                                                                                              pack2.destination)
+            return dist1 > dist2
         else:
             return manhattan_distance(player_pos, pack1.position) < manhattan_distance(player_pos, pack2.position)
     else:
-        return dist1 > dist2
+        return manhattan_distance(pack1.position, pack1.destination) > manhattan_distance(pack2.position, pack2.destination)
 
 
 def potential(env: WarehouseEnv, pos, battery):
@@ -123,23 +125,14 @@ def potential(env: WarehouseEnv, pos, battery):
     for pp in p:
         v = manhattan_distance(pp.position, pp.destination)
         d = manhattan_distance(pos, pp.position)
-        d_next = 0
-        v_next = 0
-        if len(p) > 1:
-            other_p = p[(p.index(pp) + 1) % 2]
-            v_next = manhattan_distance(other_p.position, other_p.destination)
-            d_next = manhattan_distance(pp.destination, other_p.position)
 
-        if v + d + d_next + v_next < battery:
-            res = max(res, 2 * (v + v_next))
-        elif v + d < battery:
+        if v + d < battery:
             res = max(res, 2 * v)
 
     return res
 
 
 def smart_heuristic2(env: WarehouseEnv, robot_id: int):
-    steps = env.num_steps
     my_robot: Robot = env.get_robot(robot_id)
     pos = my_robot.position
     has_package = True if my_robot.package else False
@@ -165,8 +158,9 @@ def smart_heuristic2(env: WarehouseEnv, robot_id: int):
         if manhattan_distance(go_to, pos) > battery:
             go_to = closest_station(pos, stations).position
 
-    return potential_points + BATTERY_2_CREDIT * my_robot.credit -\
-        (closest_station_dist(pos, stations) / (holding_points + battery + 1) + manhattan_distance(pos, go_to) / (holding_points + 1))
+    return potential_points + BATTERY_2_CREDIT * my_robot.credit - \
+        (closest_station_dist(pos, stations) / (holding_points + battery + 1) +
+         manhattan_distance(pos, go_to) / (holding_points + 1))
 
 
 class SecondGreedy(AgentGreedy):
@@ -178,11 +172,13 @@ class ForthGreedy(AgentGreedy):
     def heuristic(self, env: WarehouseEnv, robot_id: int):
         return smart_heuristic2(env, robot_id) - smart_heuristic2(env, (robot_id + 1) % 2)
 
+
 def potential2(env: WarehouseEnv, robot: Robot, battery):
     p: list[Package] = [pa for pa in env.packages if pa.on_board]
     res = 0
     if robot.package:
-        return 2 * manhattan_distance(robot.package.position, robot.package.destination) - manhattan_distance(robot.position, robot.package.destination)
+        return 2 * manhattan_distance(robot.package.position, robot.package.destination) - manhattan_distance(
+            robot.position, robot.package.destination)
     for pp in p:
         v = manhattan_distance(pp.position, pp.destination)
         d = manhattan_distance(robot.position, pp.position)
@@ -192,15 +188,6 @@ def potential2(env: WarehouseEnv, robot: Robot, battery):
 
     return res
 
-def potential_with_no_package(env: WarehouseEnv, pos, battery):
-    max_v = 0
-    for p in env.packages:
-        if p.on_board:
-            package_dist = manhattan_distance(p.position, pos)
-            target_dist = manhattan_distance(p.position, p.destination)
-            if package_dist < battery:
-                max_v = max(max_v, target_dist*2 - package_dist)
-    return max_v
 
 def smart_heuristic3(env: WarehouseEnv, robot_id: int):
     my_robot: Robot = env.get_robot(robot_id)
@@ -225,22 +212,39 @@ class ThirdGreedy(AgentGreedy):
 
 
 class AgentMinimax(Agent):
-    # TODO: section b : 1
     def run_step(self, env: WarehouseEnv, agent_id, time_limit):
-        return self.min_max(3, agent_id, env, 1)
+        x = self.min_max(4, agent_id, env, 1)[1]
+        return x
+
+    def heuristic(self, env: WarehouseEnv, robot_id: int):
+        return smart_heuristic(env, robot_id)
 
     def min_max(self, d, robot_id, env, turn):
-        if d == 0:
-            return self.heuristic(env, robot_id)
-        operators = env.get_legal_operators(robot_id)
-        children = [env.clone() for _ in operators]
-        for child, op in zip(children, operators):
-            child.apply_operator(robot_id, op)
-        children_val = [self.min_max(d - 1, (robot_id + 1) % 2, child, turn + 1) for child in children]
         if turn % 2 == 1:
-            return max(children_val)
+            operators = env.get_legal_operators(robot_id)
+            children = [env.clone() for _ in operators]
+            for child, op in zip(children, operators):
+                child.apply_operator(robot_id, op)
+            if d == 1 or env.num_steps == 1:
+                children_val = [self.heuristic(child, robot_id) for child in children]
+            else:
+                children_val = [self.min_max(d - 1, robot_id, child, turn + 1)[0] for child in children]
+
+            max_child = max(children_val)
+            max_index = children_val.index(max_child)
+            return max(children_val), operators[max_index]
         else:
-            return min(children_val)
+            operators = env.get_legal_operators((robot_id + 1) % 2)
+            children = [env.clone() for _ in operators]
+            for child, op in zip(children, operators):
+                child.apply_operator((robot_id + 1) % 2, op)
+            if d == 1 or env.num_steps == 1:
+                children_val = [self.heuristic(child, robot_id) for child in children]
+            else:
+                children_val = [self.min_max(d - 1, robot_id, child, turn + 1)[0] for child in children]
+            min_child = min(children_val)
+            min_index = children_val.index(min_child)
+            return min(children_val), operators[min_index]
 
 
 class AgentAlphaBeta(Agent):
