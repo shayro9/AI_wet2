@@ -32,10 +32,7 @@ def run_agents():
         "greedy": Agent.AgentGreedy(),
         "g": submission2.AgentGreedyImproved(),
         "greedyImproved": submission.AgentGreedyImproved(),
-        "secondGreedy": submission.SecondGreedy(),
-        "4Greedy": submission.ForthGreedy(),
         "minimax": submission.AgentMinimax(),
-        "minimax2": submission.AgentMinimax2(),
         "alphabeta": submission.AgentAlphaBeta(),
         "expectimax": submission.AgentExpectimax(),
         "hardcoded": submission.AgentHardCoded(),
@@ -62,8 +59,8 @@ def run_agents():
                 start = time.time()
                 op = agent.run_step(env, i, args.time_limit)
                 end = time.time()
-                # if end - start > args.time_limit:
-                #     raise RuntimeError("Agent used too much time!")
+                if end - start > args.time_limit:
+                    raise RuntimeError("Agent used too much time!")
                 env.apply_operator(i, op)
                 if args.console_print:
                     print('robot ' + str(i) + ' chose ' + op)
@@ -85,7 +82,7 @@ def run_agents():
         num_of_games = 100
 
         for k in range(num_of_games):
-            print(args.seed + k)
+            print(args.seed + k),
             env.generate(args.seed + k, 2*args.count_steps)
             if args.console_print:
                 print('initial board:')
@@ -99,8 +96,8 @@ def run_agents():
                     start = time.time()
                     op = agent.run_step(env, i, args.time_limit)
                     end = time.time()
-                    # if end - start > args.time_limit:
-                    #     raise RuntimeError("Agent used too much time!")
+                    if end - start > args.time_limit:
+                        raise RuntimeError("Agent used too much time!")
                     env.apply_operator(i, op)
                 if args.console_print:
                     print('robot ' + str(i) + ' chose ' + op)
