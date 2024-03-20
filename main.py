@@ -3,12 +3,13 @@ import time
 
 from WarehouseEnv import WarehouseEnv
 import argparse
+import submission2
 import submission
 import Agent
 
 
 def run_agents():
-    parser = argparse.ArgumentParser(description='Test your submission by pitting agents against each other.')
+    parser = argparse.ArgumentParser(description='Test your submission2 by pitting agents against each other.')
     parser.add_argument('agent0', type=str,
                         help='First agent')
     parser.add_argument('agent1', type=str,
@@ -29,14 +30,16 @@ def run_agents():
     agents = {
         "random": Agent.AgentRandom(),
         "greedy": Agent.AgentGreedy(),
+        "g": submission2.AgentGreedyImproved(),
         "greedyImproved": submission.AgentGreedyImproved(),
         "secondGreedy": submission.SecondGreedy(),
-        "thirdGreedy": submission.ThirdGreedy(),
         "4Greedy": submission.ForthGreedy(),
         "minimax": submission.AgentMinimax(),
+        "minimax2": submission.AgentMinimax2(),
         "alphabeta": submission.AgentAlphaBeta(),
         "expectimax": submission.AgentExpectimax(),
         "hardcoded": submission.AgentHardCoded(),
+        "x": submission2.AgentMinimax(),
     }
 
     # agent_names = sys.argv
@@ -81,9 +84,9 @@ def run_agents():
         draws = 0
         num_of_games = 100
 
-        for i in range(num_of_games):
-            print(args.seed + i)
-            env.generate(args.seed + i, 2*args.count_steps)
+        for k in range(num_of_games):
+            print(args.seed + k)
+            env.generate(args.seed + k, 2*args.count_steps)
             if args.console_print:
                 print('initial board:')
                 env.print()
